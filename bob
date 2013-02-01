@@ -1,0 +1,290 @@
+#!/usr/bin/env python
+#
+# BOB - Really simple build tool for single-file sources
+#
+# Supports dependencies based on pkg-config, or legacy directory-based
+# include files and directories.
+#
+# Paul Melis <paul.melis@sara.nl>
+# Visualization Group, SURFsara
+#
+# June 2012
+# First version
+#
+# June 29th, 2012
+# Added substitution of environment variables
+#
+# July 5th, 2012
+# Added -O and -g options
+#
+# September 27th, 2012
+# Allow C source files, not just C++
+#
+# January 24th, 2013
+# Added 'target' and 'outputfile' directives, added creating of shared object
+#
+# February 1st, 2013
+# Small fixes
+
+import os, sys, subprocess, select, re
+from optparse import OptionParser
+
+parser = OptionParser(usage='%prog [options] <source-file>')
+
+parser.set_defaults(
+    dry_run=False,
+    verbose=False,
+    set_rpath=True,
+    optimization_level=2,
+    enable_debug = False,
+)
+
+parser.add_option('-n', '--dry-run', dest='dry_run', action='store_true',
+    help='Don\'t actually do anything, just print command line to execute')
+parser.add_option('-v', '--verbose', dest='verbose', action='store_true',
+    help='Verbose output')
+parser.add_option('-r', '--no-rpath', dest='set_rpath', action='store_false',
+    help='Don\'t set rpath in executable (default: do set rpath)')
+parser.add_option('-O', '--optimization-level', dest='optimization_level', action='store', type=int, 
+    help='Optimization level, i.e. -O<value> (default: %default%)')
+parser.add_option('-g', '--debug', dest='enable_debug', action='store_true',
+    help='Include debug information (default: no debug information)')
+
+(options, args) = parser.parse_args()
+
+if len(args) < 1:
+    parser.print_help()
+    print
+    print '/// packagedir  <dir>'
+    print '/// usepackage  <pkgname>'
+    print '/// legacydir   <dir>'
+    print '/// uselibrary  <libname>'
+    print '/// rpath       <dir>'
+    print '/// target      executable|sharedlib'
+    print '/// outputfile  <filename>'
+    print
+    sys.exit(0)
+
+source_fullpath = args[0]
+
+source_file = os.path.split(source_fullpath)[-1]
+source_base, source_ext = os.path.splitext(source_file)
+
+if source_ext == '.c':
+    source_type = 'c'
+elif source_ext in ['.cpp', '.cxx', '.CC']:
+    source_type = 'cpp'
+else:
+    print 'Source file should be C or C++ source!'
+    sys.exit(-1)
+
+envvar_pat = re.compile('\$([A-Za-z_][A-Za-z0-9_]*)')
+
+def replace_environment_variables(s):
+    vars = re.findall(envvar_pat, s)
+    for v in vars:
+        if v not in os.environ:
+            print 'Environment variable "%s" not set, can\'t replace it in string:' % v
+            print s
+            continue
+        s = s.replace('$'+v, os.environ[v])
+    return s
+
+target = 'executable'
+output_file = ''
+
+cflags = []
+libs = []
+
+cflags.append('-O%d' % options.optimization_level)
+if options.enable_debug:
+    cflags.append('-g')
+
+package_directories = []
+packages_to_use = []
+legacy_include_directories = []
+legacy_library_directories = []
+legacy_libraries = []
+runtime_library_paths = []
+
+
+# XXX handle can't-open-file
+f = open(source_fullpath, 'rt')
+for line in f.readlines():
+    
+    if not line.startswith('/// '):
+        break
+        
+    args = line.strip()[4:].split()
+    
+    if args[0] == 'target':
+        target = args[1]
+        assert target in ['executable', 'sharedlib']
+    elif args[0] == 'outputfile':
+        output_file = args[1]
+    elif args[0] == 'packagedir':
+        assert '~' not in args[1]
+        dir = replace_environment_variables(args[1])
+        package_directories.append(dir)
+    elif args[0] == 'usepackage':
+        packages_to_use.append(args[1])
+    elif args[0] == 'legacydir':
+        assert '~' not in args[1]
+        dir = replace_environment_variables(args[1])
+        legacy_include_directories.append(os.path.join(dir, 'include'))
+        legacy_library_directories.append(os.path.join(dir, 'lib'))
+    elif args[0] == 'uselibrary':
+        legacy_libraries.append(args[1])
+    elif args[0] == 'rpath':
+        assert '~' not in args[1]
+        dir = replace_environment_variables(args[1])
+        runtime_library_paths.append(dir)
+    else:
+        print 'Unrecognized line:'
+        print line
+        sys.exit(-1)
+f.close()
+
+env = os.environ.copy()
+
+# Set PKG_CONFIG_PATH
+pcp = ''
+if 'PKG_CONFIG_PATH' in env:
+    pcp = env['PKG_CONFIG_PATH']
+for dir in package_directories:
+    pcp += ':%s/lib/pkgconfig' % dir
+env['PKG_CONFIG_PATH'] = pcp
+
+if options.verbose:
+    print 'ENVIRONMENT:'
+    print env
+    print
+    
+if source_type == 'c':
+    compiler = 'gcc'
+else:
+    compiler = 'g++'
+
+if output_file == '':
+    if target == 'sharedlib':
+        output_file = source_base+'.so'
+    else:
+        output_file = source_base
+    
+assert os.path.abspath(source_fullpath) != os.path.abspath(output_file)
+
+if target == 'sharedlib':
+    cflags.append('-fPIC')
+    cflags.append('-shared')
+
+# Add compiler arguments for packages used
+
+for pkg in packages_to_use:
+    # Check if package is available
+    # --print-errors
+    pipe = subprocess.Popen(['pkg-config', '--exists', pkg], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = pipe.communicate()
+    exists = pipe.returncode == 0
+    if not exists:
+        print 'Package %s not found by pkg-config!' % pkg
+        print stdout, stderr
+        sys.exit(-1)
+
+    # Get cflags
+    pipe = subprocess.Popen(['pkg-config', '--cflags', pkg], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = pipe.communicate()
+    if pipe.returncode != 0:
+        print 'Could not get --cflags for package %s!' % pkg
+        print stdout
+        print stderr
+        sys.exit(-1)
+
+    for arg in stdout.strip().split(' '):
+        if arg == '':
+            continue
+        cflags.append(arg)
+
+    # Get libs
+    pipe = subprocess.Popen(['pkg-config', '--libs', pkg], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = pipe.communicate()
+    if pipe.returncode != 0:
+        print 'Could not get --libs for package %s!' % pkg
+        print stdout
+        print stderr
+        sys.exit(-1)
+
+    for arg in stdout.strip().split(' '):
+        if arg == '':
+            continue
+        libs.append(arg)
+
+    # Try to find runtime library path
+    pipe = subprocess.Popen(['pkg-config', '--libs-only-L', pkg], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = pipe.communicate()
+    if pipe.returncode != 0:
+        print 'Could not get --libs-only-L for package %s!' % pkg
+        print stdout
+        print stderr
+        sys.exit(-1)
+
+    for arg in stdout.strip().split(' '):
+        if arg == '' or not arg.startswith('-L'):
+            continue
+        runtime_library_paths.append(arg[2:])
+
+# Same for legacy stuff
+
+for dir in legacy_include_directories:
+    cflags.append('-I%s' % dir)
+for dir in legacy_library_directories:
+    libs.append('-L%s' % dir)
+    runtime_library_paths.append(dir)
+for lib in legacy_libraries:
+    libs.append('-l%s' % lib)
+    
+if options.verbose:
+    print 'CFLAGS:'
+    print cflags
+    print
+    print 'LIBS:'
+    print libs
+    print
+    print 'RUNTIME LIBRARY PATHS:'
+    print runtime_library_paths
+    print
+
+compile_args = [compiler]
+compile_args.extend(cflags)
+compile_args.extend(['-o', output_file])
+compile_args.append(source_fullpath)
+compile_args.extend(libs)
+if options.set_rpath:
+    for p in runtime_library_paths:
+        compile_args.append('-Wl,-rpath=%s' % p)
+
+if options.verbose:
+    print 'FINAL COMPILER COMMAND:'
+    print compile_args
+    print
+else:
+    print 'Compiling %s -> %s' % (source_fullpath, output_file)
+    
+if options.dry_run:
+    print 'DRY RUN, WOULD EXECUTE:'
+    print compile_args
+    sys.exit(0)
+
+pipe = subprocess.Popen(compile_args, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+r, w, e = select.select([pipe.stdout, pipe.stderr], [], [])
+for f in r:
+    s = f.read()
+    if s != '':
+        print s
+
+pipe.wait()
+
+if pipe.returncode == 0:
+    print 'Success'
+else:
+    print 'FAILED!'
