@@ -45,7 +45,7 @@ parser.add_option('-v', '--verbose', dest='verbose', action='store_true',
     help='Verbose output')
 parser.add_option('-r', '--no-rpath', dest='set_rpath', action='store_false',
     help='Don\'t set rpath in executable (default: do set rpath)')
-parser.add_option('-O', '--optimization-level', dest='optimization_level', action='store', type=int, 
+parser.add_option('-O', '--optimization-level', dest='optimization_level', action='store', type=int,
     help='Optimization level, i.e. -O<value> (default: %default%)')
 parser.add_option('-g', '--debug', dest='enable_debug', action='store_true',
     help='Include debug information (default: no debug information)')
@@ -62,6 +62,8 @@ if len(args) < 1:
     print '/// rpath       <dir>'
     print '/// target      executable|sharedlib'
     print '/// outputfile  <filename>'
+    print '/// cflags      <flags>'
+    print '/// lflags      <flags>'
     print
     sys.exit(0)
 
@@ -94,6 +96,7 @@ target = 'executable'
 output_file = ''
 
 cflags = []
+lflags = []
 libs = []
 
 cflags.append('-O%d' % options.optimization_level)
@@ -111,34 +114,40 @@ runtime_library_paths = []
 # XXX handle can't-open-file
 f = open(source_fullpath, 'rt')
 for line in f.readlines():
-    
+
     if not line.startswith('/// '):
         break
-        
+
     args = line.strip()[4:].split()
-    
-    if args[0] == 'target':
+
+    directive = args[0]
+
+    if directive == 'target':
         target = args[1]
         assert target in ['executable', 'sharedlib']
-    elif args[0] == 'outputfile':
+    elif directive == 'outputfile':
         output_file = args[1]
-    elif args[0] == 'packagedir':
+    elif directive == 'packagedir':
         assert '~' not in args[1]
         dir = replace_environment_variables(args[1])
         package_directories.append(dir)
-    elif args[0] == 'usepackage':
+    elif directive == 'usepackage':
         packages_to_use.append(args[1])
-    elif args[0] == 'legacydir':
+    elif directive == 'legacydir':
         assert '~' not in args[1]
         dir = replace_environment_variables(args[1])
         legacy_include_directories.append(os.path.join(dir, 'include'))
         legacy_library_directories.append(os.path.join(dir, 'lib'))
-    elif args[0] == 'uselibrary':
+    elif directive == 'uselibrary':
         legacy_libraries.append(args[1])
-    elif args[0] == 'rpath':
+    elif directive == 'rpath':
         assert '~' not in args[1]
         dir = replace_environment_variables(args[1])
         runtime_library_paths.append(dir)
+    elif directive == 'cflags':
+        cflags.extend(args[1:])
+    elif directive == 'lflags':
+        lflags.extend(args[1:])
     else:
         print 'Unrecognized line:'
         print line
@@ -159,7 +168,7 @@ if options.verbose:
     print 'ENVIRONMENT:'
     print env
     print
-    
+
 if source_type == 'c':
     compiler = 'gcc'
 else:
@@ -170,7 +179,7 @@ if output_file == '':
         output_file = source_base+'.so'
     else:
         output_file = source_base
-    
+
 assert os.path.abspath(source_fullpath) != os.path.abspath(output_file)
 
 if target == 'sharedlib':
@@ -241,7 +250,7 @@ for dir in legacy_library_directories:
     runtime_library_paths.append(dir)
 for lib in legacy_libraries:
     libs.append('-l%s' % lib)
-    
+
 if options.verbose:
     print 'CFLAGS:'
     print cflags
@@ -257,6 +266,7 @@ compile_args = [compiler]
 compile_args.extend(cflags)
 compile_args.extend(['-o', output_file])
 compile_args.append(source_fullpath)
+compile_args.extend(lflags)
 compile_args.extend(libs)
 if options.set_rpath:
     for p in runtime_library_paths:
@@ -268,7 +278,7 @@ if options.verbose:
     print
 else:
     print 'Compiling %s -> %s' % (source_fullpath, output_file)
-    
+
 if options.dry_run:
     print 'DRY RUN, WOULD EXECUTE:'
     print compile_args
