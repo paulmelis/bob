@@ -25,6 +25,9 @@
 #
 # February 1st, 2013
 # Small fixes
+#
+# February 2nd, 2013
+# Added 'cflags' and 'lflags' directives
 
 import os, sys, subprocess, select, re
 from optparse import OptionParser
