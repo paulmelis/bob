@@ -125,45 +125,74 @@ for line in f.readlines():
 
     if not line.startswith('/// '):
         break
-
-    args = line.strip()[4:].split()
-
-    directive = args[0]
+        
+    line = line[4:].strip()
+    
+    space = line.find(' ')
+    if space == -1:
+        print 'No directive found:'
+        print line
+        continue
+        
+    directive = line[:space]
+    arg = line[space+1:]
 
     if directive == 'target':
-        target = args[1]
+        target = arg
         assert target in ['executable', 'sharedlib']
     elif directive == 'outputfile':
-        output_file = args[1]
+        output_file = arg
     elif directive == 'packagedir':
-        assert '~' not in args[1]
-        dir = replace_environment_variables(args[1])
+        assert '~' not in arg
+        dir = replace_environment_variables(arg)
         package_directories.append(dir)
     elif directive == 'usepackage':
-        packages_to_use.append(args[1])
+        packages_to_use.append(arg)
     elif directive == 'legacydir':
-        assert '~' not in args[1]
-        dir = replace_environment_variables(args[1])
+        assert '~' not in arg
+        dir = replace_environment_variables(arg)
         legacy_include_directories.append(os.path.join(dir, 'include'))
         legacy_library_directories.append(os.path.join(dir, 'lib'))
     elif directive == 'legacyincludedir':
-        assert '~' not in args[1]
-        dir = replace_environment_variables(args[1])
+        assert '~' not in arg
+        dir = replace_environment_variables(arg)
         legacy_include_directories.append(dir)
     elif directive == 'legacylibrarydir':
-        assert '~' not in args[1]
-        dir = replace_environment_variables(args[1])
+        assert '~' not in arg
+        dir = replace_environment_variables(arg)
         legacy_library_directories.append(dir)
     elif directive == 'uselibrary':
-        legacy_libraries.append(args[1])
+        legacy_libraries.append(arg)
     elif directive == 'rpath':
-        assert '~' not in args[1]
-        dir = replace_environment_variables(args[1])
+        assert '~' not in arg
+        dir = replace_environment_variables(arg)
         runtime_library_paths.append(dir)
     elif directive == 'cflags':
-        cflags.extend(args[1:])
+        pat = re.compile("`([^`]+)`")
+        m = pat.search(arg.strip())
+        if m:
+            cmd = m.group(1)            
+            pipe = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+            stdout, stderr = pipe.communicate()
+            if pipe.returncode != 0:
+                print 'Running command "%s" failed!' % cmd
+                sys.exit(-1)
+            cflags.extend(stdout.strip().split())
+        else:        
+            cflags.append(arg)
     elif directive == 'lflags':
-        lflags.extend(args[1:])
+        pat = re.compile("`([^`]+)`")
+        m = pat.search(arg.strip())
+        if m:
+            cmd = m.group(1)            
+            pipe = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+            stdout, stderr = pipe.communicate()
+            if pipe.returncode != 0:
+                print 'Running command "%s" failed!' % cmd
+                sys.exit(-1)
+            lflags.extend(stdout.strip().split())
+        else:        
+            lflags.append(arg)
     else:
         print 'Unrecognized line:'
         print line
