@@ -31,6 +31,12 @@
 #
 # June 12th, 2013
 # Added 'legacyincludedir' and 'legacylibrarydir' directives
+#
+# July 16th, 2013
+# Allow backtick expression with 'cflags' and 'lflags' directives
+# Added display of (manually tracked) version number
+
+VERSION = '20130716.01'
 
 import os, sys, subprocess, select, re
 from optparse import OptionParser
@@ -61,6 +67,8 @@ parser.add_option('-g', '--debug', dest='enable_debug', action='store_true',
 if len(args) < 1:
     parser.print_help()
     print
+    print 'Version %s' % VERSION
+    print 
     print '/// packagedir       <dir>'
     print '/// usepackage       <pkgname>'
     print '/// legacydir        <dir>'
