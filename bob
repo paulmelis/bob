@@ -5,7 +5,7 @@
 # Supports dependencies based on pkg-config, or legacy directory-based
 # include files and directories.
 #
-# Paul Melis <paul.melis@sara.nl>
+# Paul Melis <paul.melis@surfsara.nl>
 # Visualization Group, SURFsara
 #
 # June 2012
@@ -35,8 +35,11 @@
 # July 16th, 2013
 # Allow backtick expression with 'cflags' and 'lflags' directives
 # Added display of (manually tracked) version number
+#
+# August 5h, 2013
+# Added conditional directives and switches
 
-VERSION = '20130716.01'
+VERSION = '20130805.01'
 
 import os, sys, subprocess, select, re
 from optparse import OptionParser
@@ -49,6 +52,7 @@ parser.set_defaults(
     set_rpath=True,
     optimization_level=2,
     enable_debug = False,
+    enabled_switches = []
 )
 
 parser.add_option('-n', '--dry-run', dest='dry_run', action='store_true',
@@ -61,6 +65,8 @@ parser.add_option('-O', '--optimization-level', dest='optimization_level', actio
     help='Optimization level, i.e. -O<value> (default: %default%)')
 parser.add_option('-g', '--debug', dest='enable_debug', action='store_true',
     help='Include debug information (default: no debug information)')
+parser.add_option('-u', '--use', dest='enabled_switches', action='append',
+    help='Turns the given switch on, always overrides switch directive in source')
 
 (options, args) = parser.parse_args()
 
@@ -80,6 +86,9 @@ if len(args) < 1:
     print '/// outputfile       <filename>'
     print '/// cflags           <flags>'
     print '/// lflags           <flags>'
+    print
+    print '/// switch           <name> 0|1'
+    print '/// {<conditional>}  directive ... (note: conditional is eval()ed)'
     print
     sys.exit(0)
 
@@ -107,6 +116,14 @@ def replace_environment_variables(s):
             continue
         s = s.replace('$'+v, os.environ[v])
     return s
+
+switches = {}
+for switch in options.enabled_switches:
+    if switch.find(',') != -1:
+        for sw in map(lambda x: x.strip(), switch.split(',')):
+            switches[sw] = True
+    else:
+        switches[switch] = True
 
 target = 'executable'
 output_file = ''
@@ -136,6 +153,19 @@ for line in f.readlines():
         
     line = line[4:].strip()
     
+    # Check for conditional
+    pat = re.compile('^\{([^\}]+)}')
+    m = pat.search(line)
+    if m:
+        conditional_expr = m.group(1)
+        # XXX yuck, eval :)
+        res = eval(conditional_expr, {}, switches)
+        if not res:
+            # Don't execute the directive
+            continue
+        # Strip off conditional and process directive line as usual
+        line = line[m.end(0):].strip()
+                
     space = line.find(' ')
     if space == -1:
         print 'No directive found:'
@@ -143,41 +173,41 @@ for line in f.readlines():
         continue
         
     directive = line[:space]
-    arg = line[space+1:]
+    argpart = line[space+1:]
 
     if directive == 'target':
-        target = arg
+        target = argpart
         assert target in ['executable', 'sharedlib']
     elif directive == 'outputfile':
-        output_file = arg
+        output_file = argpart
     elif directive == 'packagedir':
         assert '~' not in arg
-        dir = replace_environment_variables(arg)
+        dir = replace_environment_variables(argpart)
         package_directories.append(dir)
     elif directive == 'usepackage':
-        packages_to_use.append(arg)
+        packages_to_use.append(argpart)
     elif directive == 'legacydir':
-        assert '~' not in arg
-        dir = replace_environment_variables(arg)
+        assert '~' not in argpart
+        dir = replace_environment_variables(argpart)
         legacy_include_directories.append(os.path.join(dir, 'include'))
         legacy_library_directories.append(os.path.join(dir, 'lib'))
     elif directive == 'legacyincludedir':
-        assert '~' not in arg
-        dir = replace_environment_variables(arg)
+        assert '~' not in argpart
+        dir = replace_environment_variables(argpart)
         legacy_include_directories.append(dir)
     elif directive == 'legacylibrarydir':
-        assert '~' not in arg
-        dir = replace_environment_variables(arg)
+        assert '~' not in argpart
+        dir = replace_environment_variables(argpart)
         legacy_library_directories.append(dir)
     elif directive == 'uselibrary':
-        legacy_libraries.append(arg)
+        legacy_libraries.append(argpart)
     elif directive == 'rpath':
-        assert '~' not in arg
-        dir = replace_environment_variables(arg)
+        assert '~' not in argpart
+        dir = replace_environment_variables(argpart)
         runtime_library_paths.append(dir)
     elif directive == 'cflags':
         pat = re.compile("`([^`]+)`")
-        m = pat.search(arg.strip())
+        m = pat.search(argpart.strip())
         if m:
             cmd = m.group(1)            
             pipe = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
@@ -187,10 +217,10 @@ for line in f.readlines():
                 sys.exit(-1)
             cflags.extend(stdout.strip().split())
         else:        
-            cflags.append(arg)
+            cflags.append(argpart)
     elif directive == 'lflags':
         pat = re.compile("`([^`]+)`")
-        m = pat.search(arg.strip())
+        m = pat.search(argpart.strip())
         if m:
             cmd = m.group(1)            
             pipe = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
@@ -200,9 +230,23 @@ for line in f.readlines():
                 sys.exit(-1)
             lflags.extend(stdout.strip().split())
         else:        
-            lflags.append(arg)
+            lflags.append(argpart)
+    elif directive == 'switch':
+        pat = re.compile('^([A-Z_][A-Z0-9_]*)\s+([01])$')
+        m = pat.search(argpart.strip())
+        if m:
+            switch = m.group(1)
+            if switch in switches:
+                # Don't override already assigned value (i.e. from command line)
+                continue
+            enable = bool(int(m.group(2)))
+            switches[switch] = enable
+        else:        
+            print 'Incorrectly formed switch directive:'
+            print line
+            sys.exit(-1)
     else:
-        print 'Unrecognized line:'
+        print 'Unrecognized line (directive = "%s"):' % directive
         print line
         sys.exit(-1)
 f.close()
@@ -238,6 +282,12 @@ assert os.path.abspath(source_fullpath) != os.path.abspath(output_file)
 if target == 'sharedlib':
     cflags.append('-fPIC')
     cflags.append('-shared')
+    
+# Switches
+
+for switch in switches:
+    if switch:
+        cflags.append('-DUSE_%s' % switch)
 
 # Add compiler arguments for packages used
 
