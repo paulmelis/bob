@@ -36,10 +36,13 @@
 # Allow backtick expression with 'cflags' and 'lflags' directives
 # Added display of (manually tracked) version number
 #
-# August 5h, 2013
+# August 5th, 2013
 # Added conditional directives and switches
+#
+# August 7th, 2013
+# Fix bug in switch value not being taken into account
 
-VERSION = '20130805.01'
+VERSION = '20130807.01'
 
 import os, sys, subprocess, select, re
 from optparse import OptionParser
@@ -285,8 +288,13 @@ if target == 'sharedlib':
     
 # Switches
 
-for switch in switches:
-    if switch:
+if options.verbose:
+    print 'SWITCHES:'
+    print switches
+    print
+
+for switch, value in switches.iteritems():
+    if value:
         cflags.append('-DUSE_%s' % switch)
 
 # Add compiler arguments for packages used
