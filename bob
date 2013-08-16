@@ -41,8 +41,11 @@
 #
 # August 7th, 2013
 # Fix bug in switch value not being taken into account
+# 
+# August 16th, 2013
+# Don't produce output except on error
 
-VERSION = '20130807.01'
+VERSION = '20130816.01'
 
 import os, sys, subprocess, select, re
 from optparse import OptionParser
@@ -107,6 +110,9 @@ elif source_ext in ['.cpp', '.cxx', '.CC']:
 else:
     print 'Source file should be C or C++ source!'
     sys.exit(-1)
+    
+if options.verbose:
+    print 'Compiling %s -> %s' % (source_fullpath, output_file)
 
 envvar_pat = re.compile('\$([A-Za-z_][A-Za-z0-9_]*)')
 
@@ -145,7 +151,6 @@ legacy_include_directories = []
 legacy_library_directories = []
 legacy_libraries = []
 runtime_library_paths = []
-
 
 # XXX handle can't-open-file
 f = open(source_fullpath, 'rt')
@@ -388,8 +393,6 @@ if options.verbose:
     print compile_args
     print ' '.join(compile_args)
     print
-else:
-    print 'Compiling %s -> %s' % (source_fullpath, output_file)
 
 if options.dry_run:
     print 'DRY RUN, WOULD EXECUTE:'
@@ -406,7 +409,5 @@ for f in r:
 
 pipe.wait()
 
-if pipe.returncode == 0:
-    print 'Success'
-else:
+if pipe.returncode != 0:
     print 'FAILED!'
