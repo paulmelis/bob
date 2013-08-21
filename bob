@@ -44,8 +44,11 @@
 # 
 # August 16th, 2013
 # Don't produce output except on error
+#
+# August 21th, 2013
+# Fix bug in verbose mode with undefined output file name
 
-VERSION = '20130816.01'
+VERSION = '20130821.01'
 
 import os, sys, subprocess, select, re
 from optparse import OptionParser
@@ -111,9 +114,6 @@ else:
     print 'Source file should be C or C++ source!'
     sys.exit(-1)
     
-if options.verbose:
-    print 'Compiling %s -> %s' % (source_fullpath, output_file)
-
 envvar_pat = re.compile('\$([A-Za-z_][A-Za-z0-9_]*)')
 
 def replace_environment_variables(s):
@@ -258,6 +258,9 @@ for line in f.readlines():
         print line
         sys.exit(-1)
 f.close()
+
+if options.verbose:
+    print 'Compiling %s -> %s' % (source_fullpath, output_file)
 
 env = os.environ.copy()
 
