@@ -47,8 +47,11 @@
 #
 # August 21th, 2013
 # Fix bug in verbose mode with undefined output file name
+# Fix assert using incorrect value
+# Package config path handling was broken
+# When using -v print environment vars in a readable way
 
-VERSION = '20130821.01'
+VERSION = '20130821.02'
 
 import os, sys, subprocess, select, re
 from optparse import OptionParser
@@ -84,7 +87,7 @@ if len(args) < 1:
     print
     print 'Version %s' % VERSION
     print 
-    print '/// packagedir       <dir>'
+    print '/// packagedir       <dir>                (<dir>/lib/pkgconfig is searched)'
     print '/// usepackage       <pkgname>'
     print '/// legacydir        <dir>'
     print '/// legacyincludedir <dir>'
@@ -189,7 +192,7 @@ for line in f.readlines():
     elif directive == 'outputfile':
         output_file = argpart
     elif directive == 'packagedir':
-        assert '~' not in arg
+        assert '~' not in argpart
         dir = replace_environment_variables(argpart)
         package_directories.append(dir)
     elif directive == 'usepackage':
@@ -269,12 +272,15 @@ pcp = ''
 if 'PKG_CONFIG_PATH' in env:
     pcp = env['PKG_CONFIG_PATH']
 for dir in package_directories:
-    pcp += ':%s/lib/pkgconfig' % dir
+    if pcp != '':
+        pcp += ':'
+    pcp += '%s/lib/pkgconfig' % dir
 env['PKG_CONFIG_PATH'] = pcp
 
 if options.verbose:
     print 'ENVIRONMENT:'
-    print env
+    for key in sorted(env.keys()):
+        print '%30s : %s' % (key, env[key])
     print
 
 if source_type == 'c':
@@ -394,6 +400,7 @@ if options.set_rpath:
 if options.verbose:
     print 'FINAL COMPILER COMMAND:'
     print compile_args
+    print 
     print ' '.join(compile_args)
     print
 
