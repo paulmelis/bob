@@ -3,15 +3,16 @@
 ## Introduction
 
 Do you write a lot of little C++ programs that consist of only one 
-source file? 
+source file? But
 
-1. You don't want to keep typing long compilation commands to specify
+1. you don't want to keep typing long compilation commands to specify
    include paths, dependencies, preprocessor switches, etc?
-2. Tou don't want to write a Makefile or shell script to overcome point 1?
+2. you also don't want to write a Makefile or shell script to overcome point 1,
+   as the source is a single file only?
 
 Then BOB may be of interest. It allows you to store build information
 at the start of the source file, which BOB then parses to construct and
-execute the compilation. It supports dependencies based on pkg-config, 
+execute the compilation command. It supports dependencies based on pkg-config, 
 or the legacy way of specifying include directories, library directories 
 and libraries to link manually.
 
@@ -72,11 +73,13 @@ There's also rudimentary support different build configurations, using binary "s
     
     /// switch           <name> 0|1              (0|1 value specifies the default)'
     /// {<conditional>}  directive ...           (note: <conditional> is eval()ed!)'    
+    
+For every enabled switch a ```#define USE_<switch>``` is included in
+the compile command.
+
+    $ bob -u SWITCH
 
 
-bob -u SWITCH
-
-Also #defines USE_SWITCH
 
 
 
