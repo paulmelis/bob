@@ -74,7 +74,9 @@ There's also rudimentary support different build configurations, using binary "s
     /// switch           <name> 0|1              (0|1 value specifies the default)'
     /// {<conditional>}  directive ...           (note: <conditional> is eval()ed!)'    
     
-For every enabled switch a ```#define USE_<switch>``` is included in
+Switch names can only contain upper-case letters and numbers.
+    
+For every enabled switch a ```-DUSE_<switch>``` is included in
 the compile command.
 
     $ bob -u SWITCH
