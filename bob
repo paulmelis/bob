@@ -1,12 +1,39 @@
 #!/usr/bin/env python
+# ############################################################################
 #
-# BOB - Really simple build tool for single-file sources
+# BOB - Really simple build tool for single-file C++ sources
 #
 # Supports dependencies based on pkg-config, or legacy directory-based
 # include files and directories.
 #
 # Paul Melis <paul.melis@surfsara.nl>
 # Visualization Group, SURFsara
+#
+# ############################################################################
+#
+# The MIT License (MIT)
+# 
+# Copyright (c) 2014 Paul E.C. Melis (paul.melis@surfsara.nl)
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE. 
+#
+# ############################################################################
 #
 # June 2012
 # First version
@@ -50,8 +77,12 @@
 # Fix assert using incorrect value
 # Package config path handling was broken
 # When using -v print environment vars in a readable way
+#
+# February 26th, 2014
+# Small tweaks to help texts
+# Added license text as we're going to publish this on github!
 
-VERSION = '20130821.02'
+VERSION = '20140226.01'
 
 import os, sys, subprocess, select, re
 from optparse import OptionParser
@@ -87,20 +118,20 @@ if len(args) < 1:
     print
     print 'Version %s' % VERSION
     print 
-    print '/// packagedir       <dir>                (<dir>/lib/pkgconfig is searched)'
+    print '/// packagedir       <dir>                   (<dir>/lib/pkgconfig is searched)'
     print '/// usepackage       <pkgname>'
-    print '/// legacydir        <dir>'
+    print '/// legacydir        <dir>                   (adds <dir>/include and <dir>/lib)'
     print '/// legacyincludedir <dir>'
     print '/// legacylibrarydir <dir>'
     print '/// uselibrary       <libname>'
-    print '/// rpath            <dir>'
+    print '/// rpath            <dir>                   (extra rpath to use)'
     print '/// target           executable|sharedlib'
     print '/// outputfile       <filename>'
-    print '/// cflags           <flags>'
-    print '/// lflags           <flags>'
+    print '/// cflags           <flags>                 (may contain `<expr>`)'
+    print '/// lflags           <flags>                 (may contain `<expr>`)'
     print
-    print '/// switch           <name> 0|1'
-    print '/// {<conditional>}  directive ... (note: conditional is eval()ed)'
+    print '/// switch           <name> 0|1              (0|1 value specifies the default)'
+    print '/// {<conditional>}  directive ...           (note: <conditional> is eval()ed!)'
     print
     sys.exit(0)
 
@@ -248,7 +279,7 @@ for line in f.readlines():
         if m:
             switch = m.group(1)
             if switch in switches:
-                # Don't override already assigned value (i.e. from command line)
+                # Don't override already assigned value (i.e. specified on command line)
                 continue
             enable = bool(int(m.group(2)))
             switches[switch] = enable
