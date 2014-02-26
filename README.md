@@ -18,8 +18,8 @@ and libraries to link manually.
 
 ## Usage
 
-The header of your source file is scanned for lines starting with '/// '.
-These lines can contain the following directives:
+The header of your source file is scanned for lines starting with ```/// ``` (note
+the space at the end). These lines can contain the following directives:
     
     /// packagedir       <dir>                   (<dir>/lib/pkgconfig is searched)'
     /// usepackage       <pkgname>'
@@ -69,7 +69,7 @@ See included example-opengl.cpp
 
 ## Switches
 
-There's also rudimentary support different build configurations, using binary "switches":
+There's also rudimentary support for different build configurations, using binary "switches":
     
     /// switch           <name> 0|1              (0|1 value specifies the default)'
     /// {<conditional>}  directive ...           (note: <conditional> is eval()ed!)'    
