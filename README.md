@@ -18,7 +18,7 @@ and libraries to link manually.
 
 ## Usage
 
-The header of your source file is scanned for lines starting with '///'.
+The header of your source file is scanned for lines starting with '/// '.
 These lines can contain the following directives:
     
     /// packagedir       <dir>                   (<dir>/lib/pkgconfig is searched)'
@@ -74,13 +74,39 @@ There's also rudimentary support different build configurations, using binary "s
     /// switch           <name> 0|1              (0|1 value specifies the default)'
     /// {<conditional>}  directive ...           (note: <conditional> is eval()ed!)'    
     
-Switch names can only contain upper-case letters and numbers.
-    
-For every enabled switch a ```-DUSE_<switch>``` is included in
-the compile command.
+Switch names can only contain upper-case letters and numbers. For every enabled switch 
+a ```-DUSE_<switch>``` is included in the compile command, which can be used
+in the source file.
 
-    $ bob -u SWITCH
+### Example 
 
+See the included example-switch.cpp:
+
+    /// switch READLINE 0
+    /// {READLINE} uselibrary readline
+
+    #include <cstdio>
+    #ifdef USE_READLINE
+    #include <readline/readline.h>
+    #endif
+
+    int main()
+    {
+    #ifdef USE_READLINE
+        char *input = readline("What's your name? "); 
+        printf("Hi there, %s!\n", input);
+    #else
+        printf("Hi John Doe!\n");
+    #endif
+    }
+
+    $ ./bob example-switch.cpp 
+    $ ./example-switch 
+    Hi John Doe!
+    $ ./bob -u READLINE example-switch.cpp 
+    $ ./example-switch 
+    What's your name? Paul
+    Hi there, Paul!
 
 
 

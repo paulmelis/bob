@@ -203,7 +203,7 @@ for line in f.readlines():
         # XXX yuck, eval :)
         res = eval(conditional_expr, {}, switches)
         if not res:
-            # Don't execute the directive
+            # Condition false, don't execute the directive
             continue
         # Strip off conditional and process directive line as usual
         line = line[m.end(0):].strip()
