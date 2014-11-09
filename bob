@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # ############################################################################
 #
 # BOB - Really simple build tool for single-file C++ sources
@@ -12,26 +12,26 @@
 # ############################################################################
 #
 # The MIT License (MIT)
-# 
+#
 # Copyright (c) 2014 Paul E.C. Melis (paul.melis@surfsara.nl)
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE. 
+# SOFTWARE.
 #
 # ############################################################################
 #
@@ -68,7 +68,7 @@
 #
 # August 7th, 2013
 # Fix bug in switch value not being taken into account
-# 
+#
 # August 16th, 2013
 # Don't produce output except on error
 #
@@ -117,7 +117,7 @@ if len(args) < 1:
     parser.print_help()
     print
     print 'Version %s' % VERSION
-    print 
+    print
     print '/// packagedir       <dir>                   (<dir>/lib/pkgconfig is searched)'
     print '/// usepackage       <pkgname>'
     print '/// legacydir        <dir>                   (adds <dir>/include and <dir>/lib)'
@@ -147,7 +147,7 @@ elif source_ext in ['.cpp', '.cxx', '.CC']:
 else:
     print 'Source file should be C or C++ source!'
     sys.exit(-1)
-    
+
 envvar_pat = re.compile('\$([A-Za-z_][A-Za-z0-9_]*)')
 
 def replace_environment_variables(s):
@@ -192,9 +192,9 @@ for line in f.readlines():
 
     if not line.startswith('/// '):
         break
-        
+
     line = line[4:].strip()
-    
+
     # Check for conditional
     pat = re.compile('^\{([^\}]+)}')
     m = pat.search(line)
@@ -207,13 +207,13 @@ for line in f.readlines():
             continue
         # Strip off conditional and process directive line as usual
         line = line[m.end(0):].strip()
-                
+
     space = line.find(' ')
     if space == -1:
         print 'No directive found:'
         print line
         continue
-        
+
     directive = line[:space]
     argpart = line[space+1:]
 
@@ -251,27 +251,27 @@ for line in f.readlines():
         pat = re.compile("`([^`]+)`")
         m = pat.search(argpart.strip())
         if m:
-            cmd = m.group(1)            
+            cmd = m.group(1)
             pipe = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
             stdout, stderr = pipe.communicate()
             if pipe.returncode != 0:
                 print 'Running command "%s" failed!' % cmd
                 sys.exit(-1)
             cflags.extend(stdout.strip().split())
-        else:        
+        else:
             cflags.append(argpart)
     elif directive == 'lflags':
         pat = re.compile("`([^`]+)`")
         m = pat.search(argpart.strip())
         if m:
-            cmd = m.group(1)            
+            cmd = m.group(1)
             pipe = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
             stdout, stderr = pipe.communicate()
             if pipe.returncode != 0:
                 print 'Running command "%s" failed!' % cmd
                 sys.exit(-1)
             lflags.extend(stdout.strip().split())
-        else:        
+        else:
             lflags.append(argpart)
     elif directive == 'switch':
         pat = re.compile('^([A-Z_][A-Z0-9_]*)\s+([01])$')
@@ -283,7 +283,7 @@ for line in f.readlines():
                 continue
             enable = bool(int(m.group(2)))
             switches[switch] = enable
-        else:        
+        else:
             print 'Incorrectly formed switch directive:'
             print line
             sys.exit(-1)
@@ -330,7 +330,7 @@ assert os.path.abspath(source_fullpath) != os.path.abspath(output_file)
 if target == 'sharedlib':
     cflags.append('-fPIC')
     cflags.append('-shared')
-    
+
 # Switches
 
 if options.verbose:
@@ -431,7 +431,7 @@ if options.set_rpath:
 if options.verbose:
     print 'FINAL COMPILER COMMAND:'
     print compile_args
-    print 
+    print
     print ' '.join(compile_args)
     print
 
