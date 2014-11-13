@@ -81,8 +81,14 @@
 # February 26th, 2014
 # Small tweaks to help texts
 # Added license text as we're going to publish this on github!
+#
+# November 9th, 2014
+# Use python2 as interpreter
+#
+# November 13th, 2014
+# Correct version number
 
-VERSION = '20140226.01'
+VERSION = '20141113.01'
 
 import os, sys, subprocess, select, re
 from optparse import OptionParser
