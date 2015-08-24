@@ -89,9 +89,12 @@
 # Correct version number
 #
 # July 15th, 2015
-# Allow use of clang
+# Allow use of clang through the "compiler" directive
+#
+# August 24th, 2015
+# Allow linking of object files through the "linkobject" directive
 
-VERSION = '20150715.01'
+VERSION = '20150824.01'
 
 import os, sys, subprocess, select, re
 from optparse import OptionParser
@@ -134,6 +137,7 @@ if len(args) < 1:
     print '/// legacyincludedir <dir>'
     print '/// legacylibrarydir <dir>'
     print '/// uselibrary       <libname>'
+    print '/// linkobject       <objectfile>'
     print '/// rpath            <dir>                   (extra rpath to use)'
     print '/// target           executable|sharedlib'
     print '/// outputfile       <filename>'
@@ -197,6 +201,7 @@ legacy_include_directories = []
 legacy_library_directories = []
 legacy_libraries = []
 runtime_library_paths = []
+objects_to_link = []
 
 # XXX handle can't-open-file
 f = open(source_fullpath, 'rt')
@@ -258,6 +263,9 @@ for line in f.readlines():
         legacy_library_directories.append(dir)
     elif directive == 'uselibrary':
         legacy_libraries.append(argpart)
+    elif directive == 'linkobject':
+        object_file = replace_environment_variables(argpart)
+        objects_to_link.append(object_file)
     elif directive == 'rpath':
         assert '~' not in argpart
         dir = replace_environment_variables(argpart)
@@ -434,8 +442,12 @@ if options.verbose:
     print cflags
     print
     print 'LIBS:'
-    print libs
+    print libs    
     print
+    if len(objects_to_link) > 0:
+        print 'OBJECTS:'
+        print objects_to_link
+        print
     print 'RUNTIME LIBRARY PATHS:'
     print runtime_library_paths
     print
@@ -446,6 +458,7 @@ compile_args.extend(['-o', output_file])
 compile_args.append(source_fullpath)
 compile_args.extend(lflags)
 compile_args.extend(libs)
+compile_args.extend(objects_to_link)
 if options.set_rpath:
     for p in runtime_library_paths:
         compile_args.append('-Wl,-rpath=%s' % p)
