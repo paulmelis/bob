@@ -484,7 +484,7 @@ r, w, e = select.select([pipe.stdout, pipe.stderr], [], [])
 for f in r:
     s = f.read()
     if s != b'':
-        print(s)
+        print(s.decode('utf8'))
 
 pipe.wait()
 
