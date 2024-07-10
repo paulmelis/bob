@@ -96,8 +96,11 @@
 #
 # July 9th, 2024
 # Updated to Python 3 :)
+# 
+# July 10th, 2024
+# Fixed error reporting
 
-VERSION = '20240709.01'
+VERSION = '20240710.01'
 
 import os, sys, subprocess, select, re
 from optparse import OptionParser
@@ -179,10 +182,10 @@ def replace_environment_variables(s):
     return s
 
 def show_error_output(stdout, stderr):
-    if len(stdout) > 0:
+    if stdout is not None and len(stdout) > 0:
         print('--- STDOUT ---')
         print(stdout.decode('utf8'))
-    if len(stderr) > 0:
+    if stderr is not None and len(stderr) > 0:
         print('--- STDERR ---')
         print(stderr.decode('utf8'))
 
@@ -286,10 +289,10 @@ for line in f.readlines():
         m = pat.search(argpart.strip())
         if m:
             cmd = m.group(1)
-            pipe = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+            pipe = subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
             stdout, stderr = pipe.communicate()
             if pipe.returncode != 0:
-                print('Running command "%s" failed!' % cmd)
+                print('In settings cflags: running command "%s" failed!' % cmd)
                 show_error_output(stdout, stderr)
                 sys.exit(-1)
             cflags.extend(stdout.strip().split())
@@ -300,10 +303,10 @@ for line in f.readlines():
         m = pat.search(argpart.strip())
         if m:
             cmd = m.group(1)
-            pipe = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+            pipe = subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
             stdout, stderr = pipe.communicate()
             if pipe.returncode != 0:
-                print('Running command "%s" failed!' % cmd)
+                print('In setting lflags: running command "%s" failed!' % cmd)
                 show_error_output(stdout, stderr)
                 sys.exit(-1)
             lflags.extend(stdout.strip().split())
