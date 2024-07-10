@@ -178,6 +178,14 @@ def replace_environment_variables(s):
         s = s.replace('$'+v, os.environ[v])
     return s
 
+def show_error_output(stdout, stderr):
+    if len(stdout) > 0:
+        print('--- STDOUT ---')
+        print(stdout.decode('utf8'))
+    if len(stderr) > 0:
+        print('--- STDERR ---')
+        print(stderr.decode('utf8'))
+
 switches = {}
 for switch in options.enabled_switches:
     if switch.find(',') != -1:
@@ -282,6 +290,7 @@ for line in f.readlines():
             stdout, stderr = pipe.communicate()
             if pipe.returncode != 0:
                 print('Running command "%s" failed!' % cmd)
+                show_error_output(stdout, stderr)
                 sys.exit(-1)
             cflags.extend(stdout.strip().split())
         else:
@@ -295,6 +304,7 @@ for line in f.readlines():
             stdout, stderr = pipe.communicate()
             if pipe.returncode != 0:
                 print('Running command "%s" failed!' % cmd)
+                show_error_output(stdout, stderr)
                 sys.exit(-1)
             lflags.extend(stdout.strip().split())
         else:
@@ -385,7 +395,7 @@ for pkg in packages_to_use:
     exists = pipe.returncode == 0
     if not exists:
         print('Package %s not found by pkg-config!' % pkg)
-        print(stdout, stderr)
+        show_error_output(stdout, stderr)
         sys.exit(-1)
 
     # Get cflags
@@ -393,8 +403,7 @@ for pkg in packages_to_use:
     stdout, stderr = pipe.communicate()
     if pipe.returncode != 0:
         print('Could not get --cflags for package %s!' % pkg)
-        print(stdout)
-        print(stderr)
+        show_error_output(stdout, stderr)
         sys.exit(-1)
 
     for arg in stdout.strip().split(' '):
@@ -407,8 +416,7 @@ for pkg in packages_to_use:
     stdout, stderr = pipe.communicate()
     if pipe.returncode != 0:
         print('Could not get --libs for package %s!' % pkg)
-        print(stdout)
-        print(stderr)
+        show_error_output(stdout, stderr)
         sys.exit(-1)
 
     for arg in stdout.strip().split(' '):
@@ -421,8 +429,7 @@ for pkg in packages_to_use:
     stdout, stderr = pipe.communicate()
     if pipe.returncode != 0:
         print('Could not get --libs-only-L for package %s!' % pkg)
-        print(stdout)
-        print(stderr)
+        show_error_output(stdout, stderr)
         sys.exit(-1)
 
     for arg in stdout.strip().split(' '):
