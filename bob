@@ -295,7 +295,7 @@ for line in f.readlines():
                 print('In settings cflags: running command "%s" failed!' % cmd)
                 show_error_output(stdout, stderr)
                 sys.exit(-1)
-            cflags.extend(stdout.strip().split())
+            cflags.extend(stdout.decode('utf8').strip().split())
         else:
             cflags.append(argpart)
     elif directive == 'lflags':
@@ -309,7 +309,7 @@ for line in f.readlines():
                 print('In setting lflags: running command "%s" failed!' % cmd)
                 show_error_output(stdout, stderr)
                 sys.exit(-1)
-            lflags.extend(stdout.strip().split())
+            lflags.extend(stdout.decode('utf8').strip().split())
         else:
             lflags.append(argpart)
     elif directive == 'switch':
@@ -409,7 +409,7 @@ for pkg in packages_to_use:
         show_error_output(stdout, stderr)
         sys.exit(-1)
 
-    for arg in stdout.strip().split(' '):
+    for arg in stdout.decode('utf8').strip().split(' '):
         if arg == '':
             continue
         cflags.append(arg)
@@ -422,7 +422,7 @@ for pkg in packages_to_use:
         show_error_output(stdout, stderr)
         sys.exit(-1)
 
-    for arg in stdout.strip().split(' '):
+    for arg in stdout.decode('utf8').strip().split(' '):
         if arg == '':
             continue
         libs.append(arg)
@@ -435,7 +435,7 @@ for pkg in packages_to_use:
         show_error_output(stdout, stderr)
         sys.exit(-1)
 
-    for arg in stdout.strip().split(' '):
+    for arg in stdout.decode('utf8').strip().split(' '):
         if arg == '' or not arg.startswith('-L'):
             continue
         runtime_library_paths.append(arg[2:])
